@@ -1,4 +1,5 @@
 import { START_DATE, TOTAL_DAYS } from "./program";
+import { supabase, USER_ID } from "./supabaseClient";
 
 // Bumped from v1 — scoring model changed (5-point), single-select sections added
 const KEY = "aa-tracker-v2";
@@ -103,4 +104,39 @@ export function weekProgress(state, dayIndex) {
     if (isDayComplete(state[i])) count++;
   }
   return count;
+}
+
+// ── Supabase persistence ──────────────────────────────────────
+
+// Fetch all days for this user; returns state object keyed by day_index, or null on error.
+// Falls back gracefully — caller keeps localStorage state if this returns null.
+export async function loadRemoteState() {
+  try {
+    const { data, error } = await supabase
+      .from('tracker_days')
+      .select('day_index, data')
+      .eq('user_id', USER_ID);
+    if (error) throw error;
+    const state = {};
+    for (const row of data) state[row.day_index] = row.data;
+    return state;
+  } catch (err) {
+    console.warn('Supabase load failed, using localStorage cache:', err.message);
+    return null;
+  }
+}
+
+// Upsert one day's data; fire-and-forget (logs on failure, localStorage always has the copy).
+export async function upsertDay(dayIndex, dayData) {
+  try {
+    const { error } = await supabase
+      .from('tracker_days')
+      .upsert(
+        { user_id: USER_ID, day_index: dayIndex, data: dayData },
+        { onConflict: 'user_id,day_index' },
+      );
+    if (error) throw error;
+  } catch (err) {
+    console.warn(`Supabase upsert day ${dayIndex} failed (saved locally):`, err.message);
+  }
 }

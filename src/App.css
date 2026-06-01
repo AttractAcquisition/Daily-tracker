@@ -276,6 +276,20 @@ body::before {
 .morning-journal:focus { outline: none; border-color: var(--teal); }
 .morning-journal::placeholder { color: var(--ink-faint); font-style: italic; }
 
+/* ── LOADING OVERLAY ── */
+.loading-overlay {
+  position: fixed; inset: 0;
+  z-index: 200;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--paper);
+}
+.loading-text {
+  font-family: 'Fraunces', serif;
+  font-size: 18px;
+  color: var(--ink-soft);
+  letter-spacing: .08em;
+}
+
 /* ── FOOTER ── */
 .footer {
   display: flex;

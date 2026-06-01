@@ -3,7 +3,8 @@ import {
   QUOTES, SECTIONS, TOTAL_DAYS, TOTAL_SCORE, PRINCIPLES,
 } from "./program";
 import {
-  loadState, saveState, dateForDay, todayIndex, formatDate,
+  loadState, saveState, loadRemoteState, upsertDay,
+  dateForDay, todayIndex, formatDate,
   isDayComplete, dayScore, currentStreak, longestStreak, weekProgress, weekOf,
 } from "./storage";
 import "./App.css";
@@ -12,9 +13,28 @@ export default function App() {
   const [state, setState] = useState(loadState);
   const [dayIndex, setDayIndex] = useState(todayIndex);
   const [celebrate, setCelebrate] = useState(false);
+  const [loading, setLoading] = useState(true);
   const prevComplete = useRef(isDayComplete(state[todayIndex()]));
+  const journalTimer = useRef(null);
 
+  // Sync to localStorage on every state change
   useEffect(() => saveState(state), [state]);
+
+  // On mount: fetch from Supabase. If it has data, use it (authoritative).
+  // If empty, seed it from localStorage so existing local data isn't lost.
+  useEffect(() => {
+    loadRemoteState().then((remote) => {
+      if (!remote) return; // network error — keep localStorage state
+      if (Object.keys(remote).length > 0) {
+        setState(remote);
+        saveState(remote);
+      } else {
+        // Supabase table empty — push any existing local data up
+        const local = loadState();
+        Object.entries(local).forEach(([idx, d]) => upsertDay(+idx, d));
+      }
+    }).finally(() => setLoading(false));
+  }, []);
 
   const day = state[dayIndex] || { checks: {} };
   const date = formatDate(dateForDay(dayIndex));
@@ -39,29 +59,30 @@ export default function App() {
   const week = weekOf(dayIndex) + 1;
 
   function toggle(itemId) {
-    setState((s) => {
-      const d = s[dayIndex] || { checks: {} };
-      const checks = { ...d.checks, [itemId]: !d.checks?.[itemId] };
-      return { ...s, [dayIndex]: { ...d, checks } };
-    });
+    const d = state[dayIndex] || { checks: {} };
+    const checks = { ...d.checks, [itemId]: !d.checks?.[itemId] };
+    const next = { ...d, checks };
+    setState((s) => ({ ...s, [dayIndex]: next }));
+    upsertDay(dayIndex, next);
   }
 
   function selectOption(options, chosenId) {
-    setState((s) => {
-      const d = s[dayIndex] || { checks: {} };
-      const checks = { ...d.checks };
-      const alreadySelected = checks[chosenId];
-      options.forEach((opt) => { checks[opt.id] = false; });
-      if (!alreadySelected) checks[chosenId] = true;
-      return { ...s, [dayIndex]: { ...d, checks } };
-    });
+    const d = state[dayIndex] || { checks: {} };
+    const checks = { ...d.checks };
+    const alreadySelected = checks[chosenId];
+    options.forEach((opt) => { checks[opt.id] = false; });
+    if (!alreadySelected) checks[chosenId] = true;
+    const next = { ...d, checks };
+    setState((s) => ({ ...s, [dayIndex]: next }));
+    upsertDay(dayIndex, next);
   }
 
   function setJournal(value) {
-    setState((s) => {
-      const d = s[dayIndex] || { checks: {} };
-      return { ...s, [dayIndex]: { ...d, journal: value } };
-    });
+    const d = state[dayIndex] || { checks: {} };
+    const next = { ...d, journal: value };
+    setState((s) => ({ ...s, [dayIndex]: next }));
+    clearTimeout(journalTimer.current);
+    journalTimer.current = setTimeout(() => upsertDay(dayIndex, next), 600);
   }
 
   function go(delta) {
@@ -74,6 +95,7 @@ export default function App() {
 
   return (
     <div className="page">
+      {loading && <div className="loading-overlay"><span className="loading-text">Syncing…</span></div>}
       {celebrate && <Celebration streak={streak} />}
 
       <header className="masthead">
