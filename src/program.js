@@ -73,17 +73,16 @@ export const QUOTES = [
 
 // The daily checklist, grouped by section.
 // `id` keys are stable — used for storage. Don't rename them.
+// Sections with type:"singleSelect" use `options` instead of `items`.
 export const SECTIONS = [
   {
     title: "Morning",
     accent: true,
+    journalField: true,
     items: [
       { id: "wake", label: "Wake same time — no snooze" },
       { id: "meditate_am", label: "5 min meditation / mindfulness" },
       { id: "journal_am", label: "Journal (physical): gratitude · intention · reframe" },
-      { id: "mobility", label: "10 min mobility / flexibility flow" },
-      { id: "groom", label: "Grooming — shaved, hair tidy" },
-      { id: "sun", label: "Sunscreen — build the tan, don't burn" },
     ],
   },
   {
@@ -97,34 +96,33 @@ export const SECTIONS = [
   },
   {
     title: "Body — Training",
-    items: [
-      { id: "cardio", label: "Cardio — run / row / swim / HIIT" },
-      { id: "strength", label: "Strength — push / pull / legs" },
-      { id: "endurance", label: "Endurance finisher" },
-      { id: "stretch_pm", label: "Evening stretch (10 min)" },
+    type: "singleSelect",
+    options: [
+      { id: "cardio", label: "Cardio" },
+      { id: "strength", label: "Strength" },
+      { id: "stretch_yoga", label: "Stretching / Yoga" },
     ],
   },
   {
     title: "AA Launch",
     accent: true,
     items: [
-      { id: "aa_work", label: "30–60 min — one concrete launch task" },
-      { id: "save_launch", label: "Log AA Launch fund contribution" },
-      { id: "save_runway", label: "Log 6-month runway contribution" },
+      { id: "aa_work", label: "Worked toward the AA launch today." },
     ],
   },
   {
     title: "Learn & Accredit",
-    items: [
-      { id: "reading", label: "20–30 min reading / education" },
-      { id: "accred", label: "15–30 min accreditation study (rotate)" },
-      { id: "photo", label: "Photo / video — 1+ shot (camera / drone)" },
+    type: "singleSelect",
+    options: [
+      { id: "reading", label: "Reading / education" },
+      { id: "accred", label: "Accreditation study" },
+      { id: "photo", label: "Photo / video" },
     ],
   },
   {
     title: "Evening Close-out",
     items: [
-      { id: "log_metrics", label: "Final calorie + step tally logged" },
+      { id: "groom", label: "Grooming — shaved, hair tidy" },
       { id: "journal_pm", label: "Journal (physical): 1 win, 1 lesson" },
       { id: "meditate_pm", label: "5 min wind-down" },
       { id: "plan_tomorrow", label: "Set tomorrow's #1 task" },
@@ -132,12 +130,5 @@ export const SECTIONS = [
   },
 ];
 
-// Numeric metrics tracked per day (stored as free text values)
-export const METRICS = [
-  { id: "calories", label: "Calories", target: "3300" },
-  { id: "steps", label: "Steps", target: "10,000" },
-  { id: "water", label: "Water (L)", target: "—" },
-  { id: "sleep", label: "Sleep (h)", target: "—" },
-];
-
-export const TOTAL_CHECK_ITEMS = SECTIONS.reduce((n, s) => n + s.items.length, 0);
+// Day is scored out of 5 — see dayScore() in storage.js
+export const TOTAL_SCORE = 5;

@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import {
-  QUOTES, SECTIONS, METRICS, TOTAL_DAYS, TOTAL_CHECK_ITEMS, PRINCIPLES,
+  QUOTES, SECTIONS, TOTAL_DAYS, TOTAL_SCORE, PRINCIPLES,
 } from "./program";
 import {
   loadState, saveState, dateForDay, todayIndex, formatDate,
-  isDayComplete, currentStreak, longestStreak, weekProgress, weekOf,
+  isDayComplete, dayScore, currentStreak, longestStreak, weekProgress, weekOf,
 } from "./storage";
 import "./App.css";
 
@@ -12,19 +12,16 @@ export default function App() {
   const [state, setState] = useState(loadState);
   const [dayIndex, setDayIndex] = useState(todayIndex);
   const [celebrate, setCelebrate] = useState(false);
-  const prevComplete = useRef(isDayComplete(state[todayIndex()], TOTAL_CHECK_ITEMS));
+  const prevComplete = useRef(isDayComplete(state[todayIndex()]));
 
   useEffect(() => saveState(state), [state]);
 
-  const day = state[dayIndex] || { checks: {}, metrics: {} };
+  const day = state[dayIndex] || { checks: {} };
   const date = formatDate(dateForDay(dayIndex));
   const quote = QUOTES[dayIndex] || QUOTES[0];
 
-  const doneCount = useMemo(
-    () => Object.values(day.checks || {}).filter(Boolean).length,
-    [day]
-  );
-  const complete = doneCount >= TOTAL_CHECK_ITEMS;
+  const score = useMemo(() => dayScore(day), [day]);
+  const complete = score >= TOTAL_SCORE;
 
   useEffect(() => {
     if (complete && !prevComplete.current) {
@@ -36,34 +33,44 @@ export default function App() {
     prevComplete.current = complete;
   }, [complete]);
 
-  const streak = currentStreak(state, TOTAL_CHECK_ITEMS, dayIndex);
-  const best = longestStreak(state, TOTAL_CHECK_ITEMS);
-  const weekDone = weekProgress(state, TOTAL_CHECK_ITEMS, dayIndex);
+  const streak = currentStreak(state, dayIndex);
+  const best = longestStreak(state);
+  const weekDone = weekProgress(state, dayIndex);
   const week = weekOf(dayIndex) + 1;
 
   function toggle(itemId) {
     setState((s) => {
-      const d = s[dayIndex] || { checks: {}, metrics: {} };
+      const d = s[dayIndex] || { checks: {} };
       const checks = { ...d.checks, [itemId]: !d.checks?.[itemId] };
       return { ...s, [dayIndex]: { ...d, checks } };
     });
   }
 
-  function setMetric(metricId, value) {
+  function selectOption(options, chosenId) {
     setState((s) => {
-      const d = s[dayIndex] || { checks: {}, metrics: {} };
-      const metrics = { ...d.metrics, [metricId]: value };
-      return { ...s, [dayIndex]: { ...d, metrics } };
+      const d = s[dayIndex] || { checks: {} };
+      const checks = { ...d.checks };
+      const alreadySelected = checks[chosenId];
+      options.forEach((opt) => { checks[opt.id] = false; });
+      if (!alreadySelected) checks[chosenId] = true;
+      return { ...s, [dayIndex]: { ...d, checks } };
+    });
+  }
+
+  function setJournal(value) {
+    setState((s) => {
+      const d = s[dayIndex] || { checks: {} };
+      return { ...s, [dayIndex]: { ...d, journal: value } };
     });
   }
 
   function go(delta) {
     const next = Math.min(TOTAL_DAYS - 1, Math.max(0, dayIndex + delta));
     setDayIndex(next);
-    prevComplete.current = isDayComplete(state[next], TOTAL_CHECK_ITEMS);
+    prevComplete.current = isDayComplete(state[next]);
   }
 
-  const pct = Math.round((doneCount / TOTAL_CHECK_ITEMS) * 100);
+  const pct = Math.round((score / TOTAL_SCORE) * 100);
 
   return (
     <div className="page">
@@ -105,48 +112,54 @@ export default function App() {
         <div className="progress-track">
           <div className={"progress-fill" + (complete ? " full" : "")} style={{ width: pct + "%" }} />
         </div>
-        <div className="progress-lbl">{doneCount} / {TOTAL_CHECK_ITEMS} {complete ? "\u00b7 day closed \u2713" : ""}</div>
+        <div className="progress-lbl">{score} / {TOTAL_SCORE} {complete ? "\u00b7 day closed \u2713" : ""}</div>
       </div>
 
       <main className="grid">
         {SECTIONS.map((section) => (
           <section className={"card" + (section.accent ? " accent" : "")} key={section.title}>
             <h2 className="card-title">{section.title}</h2>
-            <ul>
-              {section.items.map((item) => {
-                const on = !!day.checks?.[item.id];
-                return (
-                  <li key={item.id} className={on ? "checked" : ""} onClick={() => toggle(item.id)}>
-                    <span className={"box" + (on ? " on" : "")}>{on ? "\u2713" : ""}</span>
-                    <span className="lbl">{item.label}</span>
-                  </li>
-                );
-              })}
-            </ul>
+            {section.type === "singleSelect" ? (
+              <div className="single-select">
+                {section.options.map((opt) => {
+                  const selected = !!day.checks?.[opt.id];
+                  return (
+                    <button
+                      key={opt.id}
+                      className={"select-pill" + (selected ? " selected" : "")}
+                      onClick={() => selectOption(section.options, opt.id)}
+                    >
+                      {selected && <span className="pill-check">{"\u2713"}</span>}
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <>
+                <ul>
+                  {section.items.map((item) => {
+                    const on = !!day.checks?.[item.id];
+                    return (
+                      <li key={item.id} className={on ? "checked" : ""} onClick={() => toggle(item.id)}>
+                        <span className={"box" + (on ? " on" : "")}>{on ? "\u2713" : ""}</span>
+                        <span className="lbl">{item.label}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+                {section.journalField && (
+                  <textarea
+                    className="morning-journal"
+                    placeholder={"Morning journal \u2014 thoughts, intentions, reframes\u2026"}
+                    value={day.journal || ""}
+                    onChange={(e) => setJournal(e.target.value)}
+                  />
+                )}
+              </>
+            )}
           </section>
         ))}
-
-        <section className="card metrics-card">
-          <h2 className="card-title">Daily Metrics</h2>
-          <div className="metrics">
-            {METRICS.map((m) => (
-              <label className="metric" key={m.id}>
-                <span className="metric-lbl">{m.label}</span>
-                <input
-                  className="metric-in"
-                  inputMode="numeric"
-                  placeholder={m.target}
-                  value={day.metrics?.[m.id] || ""}
-                  onChange={(e) => setMetric(m.id, e.target.value)}
-                />
-                <span className="metric-target">/ {m.target}</span>
-              </label>
-            ))}
-          </div>
-          <p className="journal-note">
-            &#9998; Journal &amp; reflections go in your physical notebook &mdash; pen on paper.
-          </p>
-        </section>
       </main>
 
       <footer className="footer">

@@ -227,41 +227,54 @@ body::before {
 .lbl { font-size: 14.5px; line-height: 1.35; padding-top: 1px; }
 .checked .lbl { color: var(--ink-soft); text-decoration: line-through; text-decoration-color: var(--line); }
 
-/* ── METRICS ── */
-.metrics-card { display: flex; flex-direction: column; }
-.metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.metric {
+/* ── SINGLE-SELECT PILLS ── */
+.single-select {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 2px;
+}
+.select-pill {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
+  width: 100%;
+  padding: 11px 14px;
+  background: var(--paper-2);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  font-family: 'Newsreader', Georgia, serif;
+  font-size: 14.5px;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all .15s ease;
+  text-align: left;
+}
+.select-pill:hover:not(.selected) { border-color: var(--teal); background: var(--card); }
+.select-pill.selected {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: var(--paper);
+}
+.pill-check { font-size: 13px; flex-shrink: 0; }
+
+/* ── MORNING JOURNAL ── */
+.morning-journal {
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px 12px;
   background: var(--paper-2);
   border: 1px solid var(--line);
   border-radius: 6px;
-  padding: 7px 9px;
-}
-.metric-lbl { font-size: 12px; color: var(--ink-soft); min-width: 56px; }
-.metric-in {
-  width: 100%;
-  border: none;
-  background: transparent;
-  font-family: 'Fraunces', serif;
-  font-size: 17px;
-  font-weight: 600;
+  font-family: 'Newsreader', Georgia, serif;
+  font-size: 14px;
   color: var(--ink);
-  border-bottom: 1.5px solid var(--ink);
-  padding: 1px 2px;
-  min-width: 0;
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 84px;
 }
-.metric-in:focus { outline: none; border-color: var(--teal); }
-.metric-target { font-size: 11px; color: var(--ink-faint); white-space: nowrap; }
-.journal-note {
-  margin-top: auto;
-  padding-top: 12px;
-  font-style: italic;
-  font-size: 13px;
-  color: var(--ink-soft);
-  line-height: 1.4;
-}
+.morning-journal:focus { outline: none; border-color: var(--teal); }
+.morning-journal::placeholder { color: var(--ink-faint); font-style: italic; }
 
 /* ── FOOTER ── */
 .footer {
